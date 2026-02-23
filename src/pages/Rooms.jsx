@@ -81,6 +81,11 @@ const Rooms = () => {
         currentOccupancy: 0,
         occupantIds: []
     });
+    const [studentsWithoutRooms, setStudentsWithoutRooms] = useState([]);
+    const [allocationDialogOpen, setAllocationDialogOpen] = useState(false);
+    const [selectedStudentId, setSelectedStudentId] = useState('');
+    const [allocatingRoom, setAllocatingRoom] = useState(null);
+    const [allocationLoading, setAllocationLoading] = useState(false);
 
     useEffect(() => {
         fetchRooms();
@@ -96,8 +101,16 @@ const Rooms = () => {
                 ...doc.data()
             }));
             setRooms(roomList);
+
+            // Fetch students without rooms
+            const sq = query(collection(db, 'users'), where('role', '==', 'student'));
+            const sSnapshot = await getDocs(sq);
+            const availableStudents = sSnapshot.docs
+                .map(doc => ({ id: doc.id, ...doc.data() }))
+                .filter(s => !s.roomId);
+            setStudentsWithoutRooms(availableStudents);
         } catch (error) {
-            console.error("Error fetching rooms:", error);
+            console.error("Error fetching rooms/students:", error);
         } finally {
             setLoading(false);
         }
@@ -187,6 +200,97 @@ const Rooms = () => {
         }
     };
 
+    const handleOpenAllocation = (room) => {
+        setAllocatingRoom(room);
+        setAllocationDialogOpen(true);
+    };
+
+    const handleConfirmAllocation = async () => {
+        if (!selectedStudentId || !allocatingRoom) return;
+        setAllocationLoading(true);
+        try {
+            const student = studentsWithoutRooms.find(s => s.id === selectedStudentId);
+            const roomRef = doc(db, 'rooms', allocatingRoom.id);
+            const studentRef = doc(db, 'users', selectedStudentId);
+
+            const newOccupants = [...(allocatingRoom.occupantIds || []), selectedStudentId];
+
+            await updateDoc(roomRef, {
+                occupantIds: newOccupants,
+                currentOccupancy: newOccupants.length,
+                updatedAt: serverTimestamp()
+            });
+
+            await updateDoc(studentRef, {
+                roomId: allocatingRoom.id,
+                roomNumber: `${allocatingRoom.blockName}-${allocatingRoom.roomNumber}`,
+                updatedAt: serverTimestamp()
+            });
+
+            setAllocationDialogOpen(false);
+            setSelectedStudentId('');
+            setAllocatingRoom(null);
+            fetchRooms();
+        } catch (error) {
+            console.error("Allocation error:", error);
+        } finally {
+            setAllocationLoading(false);
+        }
+    };
+
+    const handleRandomAllocate = async () => {
+        if (studentsWithoutRooms.length === 0) {
+            alert("No students left to allocate.");
+            return;
+        }
+
+        const availableRooms = rooms.filter(r => r.currentOccupancy < r.capacity);
+        if (availableRooms.length === 0) {
+            alert("No rooms available for allocation.");
+            return;
+        }
+
+        if (window.confirm(`Attempting to automatically allocate ${Math.min(studentsWithoutRooms.length, availableRooms.reduce((acc, r) => acc + (r.capacity - r.currentOccupancy), 0))} students. Continue?`)) {
+            setLoading(true);
+            try {
+                let currentStudents = [...studentsWithoutRooms];
+                for (let room of availableRooms) {
+                    let vacancies = room.capacity - room.currentOccupancy;
+                    let occupantsToAdd = [];
+
+                    while (vacancies > 0 && currentStudents.length > 0) {
+                        const student = currentStudents.pop();
+                        occupantsToAdd.push(student.id);
+
+                        await updateDoc(doc(db, 'users', student.id), {
+                            roomId: room.id,
+                            roomNumber: `${room.blockName}-${room.roomNumber}`,
+                            updatedAt: serverTimestamp()
+                        });
+
+                        vacancies--;
+                    }
+
+                    if (occupantsToAdd.length > 0) {
+                        const newOccupants = [...(room.occupantIds || []), ...occupantsToAdd];
+                        await updateDoc(doc(db, 'rooms', room.id), {
+                            occupantIds: newOccupants,
+                            currentOccupancy: newOccupants.length,
+                            updatedAt: serverTimestamp()
+                        });
+                    }
+
+                    if (currentStudents.length === 0) break;
+                }
+                fetchRooms();
+            } catch (error) {
+                console.error("Random allocation error:", error);
+            } finally {
+                setLoading(false);
+            }
+        }
+    };
+
     const getConditionColor = (condition) => {
         switch (condition) {
             case 'good': return 'success';
@@ -209,13 +313,23 @@ const Rooms = () => {
                 <Typography variant="h4" sx={{ fontWeight: 700 }}>
                     Room Management
                 </Typography>
-                <Button
-                    variant="contained"
-                    startIcon={<Add />}
-                    onClick={() => handleOpenDialog()}
-                >
-                    Add Room
-                </Button>
+                <Box>
+                    <Button
+                        variant="outlined"
+                        startIcon={<People />}
+                        onClick={handleRandomAllocate}
+                        sx={{ mr: 2 }}
+                    >
+                        Random Allocation
+                    </Button>
+                    <Button
+                        variant="contained"
+                        startIcon={<Add />}
+                        onClick={() => handleOpenDialog()}
+                    >
+                        Add Room
+                    </Button>
+                </Box>
             </Box>
 
             <Paper sx={{ mb: 4, p: 2, display: 'flex', gap: 2 }}>
@@ -321,18 +435,28 @@ const Rooms = () => {
                                         />
                                     </Box>
                                 </CardContent>
-                                <CardActions sx={{ justifyContent: 'flex-end', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
-                                    <IconButton size="small" onClick={() => handleOpenDialog(room)}>
-                                        <Edit fontSize="small" />
-                                    </IconButton>
-                                    <IconButton
+                                <CardActions sx={{ justifyContent: 'space-between', borderTop: '1px solid rgba(0,0,0,0.08)' }}>
+                                    <Button
                                         size="small"
-                                        color="error"
-                                        onClick={() => handleDelete(room.id)}
-                                        disabled={room.currentOccupancy > 0}
+                                        startIcon={<Add />}
+                                        onClick={() => handleOpenAllocation(room)}
+                                        disabled={room.currentOccupancy >= room.capacity}
                                     >
-                                        <Delete fontSize="small" />
-                                    </IconButton>
+                                        Allocate
+                                    </Button>
+                                    <Box>
+                                        <IconButton size="small" onClick={() => handleOpenDialog(room)}>
+                                            <Edit fontSize="small" />
+                                        </IconButton>
+                                        <IconButton
+                                            size="small"
+                                            color="error"
+                                            onClick={() => handleDelete(room.id)}
+                                            disabled={room.currentOccupancy > 0}
+                                        >
+                                            <Delete fontSize="small" />
+                                        </IconButton>
+                                    </Box>
                                 </CardActions>
                             </Card>
                         </Grid>
@@ -470,6 +594,43 @@ const Rooms = () => {
                     <Button onClick={handleCloseDialog}>Cancel</Button>
                     <Button variant="contained" onClick={handleSubmit}>
                         {selectedRoom ? 'Update' : 'Add Room'}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Allocation Dialog */}
+            <Dialog open={allocationDialogOpen} onClose={() => setAllocationDialogOpen(false)} maxWidth="xs" fullWidth>
+                <DialogTitle sx={{ fontWeight: 600 }}>Allocate Room {allocatingRoom?.blockName}-{allocatingRoom?.roomNumber}</DialogTitle>
+                <DialogContent dividers>
+                    <Typography variant="body2" sx={{ mb: 2, color: 'text.secondary' }}>
+                        Select a student to allocate to this room. Only students without currently assigned rooms are shown.
+                    </Typography>
+                    <FormControl fullWidth sx={{ mt: 1 }}>
+                        <InputLabel>Select Student</InputLabel>
+                        <Select
+                            value={selectedStudentId}
+                            onChange={(e) => setSelectedStudentId(e.target.value)}
+                            label="Select Student"
+                        >
+                            {studentsWithoutRooms.map((student) => (
+                                <MenuItem key={student.id} value={student.id}>
+                                    {student.fullName} ({student.enrollmentId})
+                                </MenuItem>
+                            ))}
+                            {studentsWithoutRooms.length === 0 && (
+                                <MenuItem disabled>No students available</MenuItem>
+                            )}
+                        </Select>
+                    </FormControl>
+                </DialogContent>
+                <DialogActions sx={{ p: 2 }}>
+                    <Button onClick={() => setAllocationDialogOpen(false)}>Cancel</Button>
+                    <Button
+                        variant="contained"
+                        onClick={handleConfirmAllocation}
+                        disabled={!selectedStudentId || allocationLoading}
+                    >
+                        {allocationLoading ? <CircularProgress size={20} color="inherit" /> : 'Confirm Allocation'}
                     </Button>
                 </DialogActions>
             </Dialog>

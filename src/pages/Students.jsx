@@ -221,6 +221,7 @@ const Students = () => {
                             <TableCell>Student</TableCell>
                             <TableCell>ID / Roll No</TableCell>
                             <TableCell>Year</TableCell>
+                            <TableCell>Room</TableCell>
                             <TableCell>Contact</TableCell>
                             <TableCell>Status</TableCell>
                             <TableCell align="right">Actions</TableCell>
@@ -229,7 +230,7 @@ const Students = () => {
                     <TableBody>
                         {loading ? (
                             <TableRow>
-                                <TableCell colSpan={6} align="center" sx={{ py: 3 }}>
+                                <TableCell colSpan={7} align="center" sx={{ py: 3 }}>
                                     <CircularProgress />
                                 </TableCell>
                             </TableRow>
@@ -252,6 +253,13 @@ const Students = () => {
                                 </TableCell>
                                 <TableCell>{student.enrollmentId || 'N/A'}</TableCell>
                                 <TableCell>{student.year ? `Year ${student.year}` : 'N/A'}</TableCell>
+                                <TableCell>
+                                    {student.roomNumber ? (
+                                        <Chip label={student.roomNumber} size="small" variant="outlined" color="primary" />
+                                    ) : (
+                                        <Chip label="Unallocated" size="small" variant="outlined" color="warning" />
+                                    )}
+                                </TableCell>
                                 <TableCell>{student.phoneNumber || 'N/A'}</TableCell>
                                 <TableCell>
                                     <Chip
