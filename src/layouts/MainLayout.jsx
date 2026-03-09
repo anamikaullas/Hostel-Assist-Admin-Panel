@@ -83,9 +83,12 @@ const MainLayout = () => {
     const drawer = (
         <div>
             <Toolbar sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', py: 2 }}>
-                <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
-                    HostelAssist
-                </Typography>
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                    <img src="/logo.png" alt="HostelAssist" style={{ height: '32px', width: 'auto' }} />
+                    <Typography variant="h6" sx={{ fontWeight: 700, color: 'primary.main' }}>
+                        HostelAssist
+                    </Typography>
+                </Box>
             </Toolbar>
             <Divider />
             <List sx={{ px: 2, py: 2 }}>
