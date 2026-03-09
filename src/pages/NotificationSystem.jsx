@@ -32,7 +32,9 @@ import {
 import {
     collection,
     getDocs,
+    setDoc,
     addDoc,
+    doc,
     query,
     orderBy,
     limit,
@@ -75,9 +77,10 @@ const NotificationSystem = () => {
         e.preventDefault();
         setSendLoading(true);
         try {
-            // In a real app, this would also trigger a Cloud Function for FCM
-            await addDoc(collection(db, 'notifications'), {
+            const newDocRef = doc(collection(db, 'notifications'));
+            await setDoc(newDocRef, {
                 ...formData,
+                notificationId: newDocRef.id,
                 createdAt: serverTimestamp(),
                 sentBy: 'Admin'
             });

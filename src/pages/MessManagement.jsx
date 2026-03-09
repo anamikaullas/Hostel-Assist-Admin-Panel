@@ -38,6 +38,7 @@ import {
 import {
     collection,
     getDocs,
+    setDoc,
     addDoc,
     updateDoc,
     doc,
@@ -114,17 +115,25 @@ const MessManagement = () => {
         try {
             const payload = {
                 date: new Date(formData.date),
-                breakfast: formData.breakfast.split(',').map(i => i.trim()),
-                lunch: formData.lunch.split(',').map(i => i.trim()),
-                dinner: formData.dinner.split(',').map(i => i.trim()),
+                breakfast: formData.breakfast.split(',').map(i => i.trim()).filter(Boolean),
+                lunch: formData.lunch.split(',').map(i => i.trim()).filter(Boolean),
+                dinner: formData.dinner.split(',').map(i => i.trim()).filter(Boolean),
                 remarks: formData.remarks,
                 updatedAt: new Date()
             };
 
             if (selectedMenu) {
-                await updateDoc(doc(db, 'mess_menu', selectedMenu.id), payload);
+                await updateDoc(doc(db, 'mess_menu', selectedMenu.id), {
+                    ...payload,
+                    menuId: selectedMenu.id
+                });
             } else {
-                await addDoc(collection(db, 'mess_menu'), { ...payload, createdAt: new Date() });
+                const newDocRef = doc(collection(db, 'mess_menu'));
+                await setDoc(newDocRef, {
+                    ...payload,
+                    menuId: newDocRef.id,
+                    createdAt: new Date()
+                });
             }
             setOpenDialog(false);
             fetchData();

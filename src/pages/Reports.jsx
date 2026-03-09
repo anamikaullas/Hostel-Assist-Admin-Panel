@@ -29,6 +29,7 @@ import {
     BarChart,
     PieChart as PieChartIcon
 } from '@mui/icons-material';
+import Avatar from '@mui/material/Avatar';
 
 const REPORTS = [
     { id: 1, title: 'Student Enrollment Report', category: 'Students', icon: <Feed /> },

@@ -36,6 +36,7 @@ import {
 import {
     collection,
     getDocs,
+    setDoc,
     addDoc,
     updateDoc,
     deleteDoc,
@@ -131,16 +132,20 @@ const Students = () => {
     const handleSubmit = async () => {
         try {
             if (selectedStudent) {
-                // Update existing
+                // Update existing — preserve uid
                 const studentRef = doc(db, 'users', selectedStudent.id);
                 await updateDoc(studentRef, {
                     ...formData,
+                    uid: selectedStudent.id,
                     updatedAt: serverTimestamp()
                 });
             } else {
-                // Create new
-                await addDoc(collection(db, 'users'), {
+                // Create new — use doc ref so uid equals document ID
+                const newDocRef = doc(collection(db, 'users'));
+                await setDoc(newDocRef, {
                     ...formData,
+                    uid: newDocRef.id,
+                    roomId: null,
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp()
                 });

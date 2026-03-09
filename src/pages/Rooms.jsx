@@ -41,13 +41,15 @@ import {
 import {
     collection,
     getDocs,
+    setDoc,
     addDoc,
     updateDoc,
     deleteDoc,
     doc,
     serverTimestamp,
     query,
-    orderBy
+    orderBy,
+    where
 } from 'firebase/firestore';
 import { db } from '../firebase';
 
@@ -173,11 +175,14 @@ const Rooms = () => {
                 const roomRef = doc(db, 'rooms', selectedRoom.id);
                 await updateDoc(roomRef, {
                     ...formData,
+                    roomId: selectedRoom.id,
                     updatedAt: serverTimestamp()
                 });
             } else {
-                await addDoc(collection(db, 'rooms'), {
+                const newDocRef = doc(collection(db, 'rooms'));
+                await setDoc(newDocRef, {
                     ...formData,
+                    roomId: newDocRef.id,
                     createdAt: serverTimestamp(),
                     updatedAt: serverTimestamp()
                 });
