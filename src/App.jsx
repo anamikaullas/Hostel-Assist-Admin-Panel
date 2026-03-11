@@ -18,7 +18,6 @@ import Fees from './pages/Fees';
 import MessManagement from './pages/MessManagement';
 import NotificationSystem from './pages/NotificationSystem';
 import ChatbotAnalytics from './pages/ChatbotAnalytics';
-import Reports from './pages/Reports';
 import Settings from './pages/Settings';
 
 const ProtectedRoute = ({ children }) => {
@@ -52,7 +51,7 @@ function App() {
               <Route path="mess" element={<MessManagement />} />
               <Route path="notifications" element={<NotificationSystem />} />
               <Route path="chatbot" element={<ChatbotAnalytics />} />
-              <Route path="reports" element={<Reports />} />
+              
               <Route path="settings" element={<Settings />} />
             </Route>
 

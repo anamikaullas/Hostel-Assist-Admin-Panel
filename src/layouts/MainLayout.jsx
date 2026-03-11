@@ -76,7 +76,6 @@ const MainLayout = () => {
         { text: 'Mess Management', icon: <Restaurant />, path: '/mess' },
         { text: 'Notifications', icon: <Notifications />, path: '/notifications' },
         { text: 'Chatbot Analytics', icon: <Analytics />, path: '/chatbot' },
-        { text: 'Reports', icon: <BarChart />, path: '/reports' },
         { text: 'Settings', icon: <Settings />, path: '/settings' },
     ];
 
