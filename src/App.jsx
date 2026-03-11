@@ -7,6 +7,7 @@ import {
 } from "react-router-dom";
 import { ThemeProvider } from "@mui/material/styles";
 import CssBaseline from "@mui/material/CssBaseline";
+import { Box, CircularProgress } from "@mui/material";
 import { AuthProvider, useAuth } from "./context/AuthContext";
 import theme from "./theme";
 
@@ -29,8 +30,23 @@ import Settings from "./pages/Settings";
 const ProtectedRoute = ({ children }) => {
   const { currentUser, loading } = useAuth();
 
-  if (loading) return null;
-  if (!currentUser) return <Navigate to="/login" />;
+  if (loading) {
+    return (
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "center",
+          alignItems: "center",
+          minHeight: "100vh",
+          background: "linear-gradient(135deg, #1976D2 0%, #64b5f6 100%)",
+        }}
+      >
+        <CircularProgress size={60} sx={{ color: "white" }} />
+      </Box>
+    );
+  }
+
+  if (!currentUser) return <Navigate to="/login" replace />;
 
   return children;
 };
