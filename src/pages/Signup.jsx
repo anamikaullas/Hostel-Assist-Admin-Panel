@@ -18,32 +18,72 @@ import {
   Lock,
   Visibility,
   VisibilityOff,
-  Login as LoginIcon,
+  PersonAdd,
+  Person,
+  Phone,
 } from "@mui/icons-material";
 import { useAuth } from "../context/AuthContext";
 import { useNavigate, Link } from "react-router-dom";
 
-const Login = () => {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+const Signup = () => {
+  const [formData, setFormData] = useState({
+    fullName: "",
+    email: "",
+    phoneNumber: "",
+    password: "",
+    confirmPassword: "",
+  });
   const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
 
-  const { login } = useAuth();
+  const { signup } = useAuth();
   const navigate = useNavigate();
+
+  const handleChange = (e) => {
+    setFormData({
+      ...formData,
+      [e.target.name]: e.target.value,
+    });
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError("");
+
+    // Validation
+    if (formData.password !== formData.confirmPassword) {
+      setError("Passwords do not match");
+      return;
+    }
+
+    if (formData.password.length < 6) {
+      setError("Password must be at least 6 characters long");
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await login(email, password);
+      await signup(
+        formData.email,
+        formData.password,
+        formData.fullName,
+        formData.phoneNumber,
+      );
       navigate("/");
     } catch (err) {
       console.error(err);
-      setError("Failed to log in. Please check your credentials.");
+      if (err.code === "auth/email-already-in-use") {
+        setError("Email address is already in use");
+      } else if (err.code === "auth/invalid-email") {
+        setError("Invalid email address");
+      } else if (err.code === "auth/weak-password") {
+        setError("Password is too weak");
+      } else {
+        setError("Failed to create account. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -60,7 +100,7 @@ const Login = () => {
         p: 2,
       }}
     >
-      <Container maxWidth="xs">
+      <Container maxWidth="sm">
         <Card sx={{ borderRadius: 4, boxShadow: "0 8px 32px rgba(0,0,0,0.2)" }}>
           <CardContent sx={{ p: 4 }}>
             <Box
@@ -77,7 +117,6 @@ const Login = () => {
                 alt="HostelAssist"
                 style={{ height: "52px", width: "auto" }}
               />
-
               <Typography
                 variant="h6"
                 sx={{
@@ -89,12 +128,13 @@ const Login = () => {
                 HostelAssist
               </Typography>
             </Box>
+
             <Typography
               variant="h5"
               gutterBottom
               sx={{ fontWeight: 600, mb: 3, textAlign: "center" }}
             >
-              Administrative Login
+              Create Admin Account
             </Typography>
 
             {error && (
@@ -106,12 +146,32 @@ const Login = () => {
             <form onSubmit={handleSubmit}>
               <TextField
                 fullWidth
-                label="Email Address"
+                label="Full Name"
+                name="fullName"
                 variant="outlined"
                 margin="normal"
                 required
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                value={formData.fullName}
+                onChange={handleChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Person color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <TextField
+                fullWidth
+                label="Email Address"
+                name="email"
+                type="email"
+                variant="outlined"
+                margin="normal"
+                required
+                value={formData.email}
+                onChange={handleChange}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -123,13 +183,32 @@ const Login = () => {
 
               <TextField
                 fullWidth
+                label="Phone Number"
+                name="phoneNumber"
+                variant="outlined"
+                margin="normal"
+                required
+                value={formData.phoneNumber}
+                onChange={handleChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Phone color="action" />
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
+              <TextField
+                fullWidth
                 label="Password"
+                name="password"
                 type={showPassword ? "text" : "password"}
                 variant="outlined"
                 margin="normal"
                 required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                value={formData.password}
+                onChange={handleChange}
                 InputProps={{
                   startAdornment: (
                     <InputAdornment position="start">
@@ -149,6 +228,41 @@ const Login = () => {
                 }}
               />
 
+              <TextField
+                fullWidth
+                label="Confirm Password"
+                name="confirmPassword"
+                type={showConfirmPassword ? "text" : "password"}
+                variant="outlined"
+                margin="normal"
+                required
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <Lock color="action" />
+                    </InputAdornment>
+                  ),
+                  endAdornment: (
+                    <InputAdornment position="end">
+                      <IconButton
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        edge="end"
+                      >
+                        {showConfirmPassword ? (
+                          <VisibilityOff />
+                        ) : (
+                          <Visibility />
+                        )}
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
+
               <Button
                 fullWidth
                 type="submit"
@@ -160,22 +274,22 @@ const Login = () => {
                   loading ? (
                     <CircularProgress size={20} color="inherit" />
                   ) : (
-                    <LoginIcon />
+                    <PersonAdd />
                   )
                 }
               >
-                {loading ? "Logging in..." : "Login"}
+                {loading ? "Creating Account..." : "Create Account"}
               </Button>
 
               <Box sx={{ mt: 3, textAlign: "center" }}>
                 <Typography variant="body2" color="text.secondary">
-                  Don't have an account?{" "}
+                  Already have an account?{" "}
                   <MuiLink
                     component={Link}
-                    to="/signup"
+                    to="/login"
                     sx={{ fontWeight: 600, textDecoration: "none" }}
                   >
-                    Create Admin Account
+                    Login
                   </MuiLink>
                 </Typography>
               </Box>
@@ -195,4 +309,4 @@ const Login = () => {
   );
 };
 
-export default Login;
+export default Signup;
